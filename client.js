@@ -146,16 +146,53 @@ document.addEventListener('DOMContentLoaded', () => {
         if (screens[screenName]) screens[screenName].classList.add('active'); else screens.home.classList.add('active');
     }
 
+    // *** BẮT ĐẦU SỬA LỖI ***
+    // Hàm reset trạng thái và giao diện khi quay về màn hình chính
+    function resetToHomeScreen() {
+        stopMusic();
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
+        // Đặt lại các biến trạng thái quan trọng
+        isHost = false;
+        currentPin = '';
+
+        // Đặt lại các thành phần giao diện
+        if (nextQuestionBtn) nextQuestionBtn.style.display = 'none';
+        if (playerScore) playerScore.innerText = 'Điểm của bạn: 0';
+        if (playerListUl) playerListUl.innerHTML = '';
+        if (leaderboardTableBody) leaderboardTableBody.innerHTML = '';
+        if (podiumOl) podiumOl.innerHTML = '';
+        if (errorMessage) errorMessage.innerText = '';
+        if (pinInput) pinInput.value = '';
+        if (nicknameInput) nicknameInput.value = '';
+        
+        showScreen('home');
+    }
+    // *** KẾT THÚC SỬA LỖI ***
+
+
     // --- Events ---
     goPlayerBtn.addEventListener('click', () => { unlockAudio(); showScreen('playerJoin'); });
     goLibraryBtn.addEventListener('click', () => { unlockAudio(); loadQuizzes(); showScreen('library'); });
     goCreateQuizBtn.addEventListener('click', () => { unlockAudio(); openEditScreen(null); });
     
-    backToHomeBtn.addEventListener('click', () => { stopMusic(); showScreen('home'); });
-    backFromEditBtn.addEventListener('click', () => { stopMusic(); showScreen('home'); });
-    backFromHostLobbyBtn.addEventListener('click', () => { stopMusic(); socket.emit('host_cancel_room', { gamePin: currentPin }); showScreen('library'); });
-    backFromPlayerJoinBtn.addEventListener('click', () => { stopMusic(); showScreen('home'); });
-    backToHomeFromGameOverBtn.addEventListener('click', () => { stopMusic(); showScreen('home'); });
+    // *** BẮT ĐẦU SỬA LỖI ***
+    // Sử dụng hàm resetToHomeScreen cho tất cả các nút quay về trang chủ
+    backToHomeBtn.addEventListener('click', resetToHomeScreen);
+    backFromEditBtn.addEventListener('click', resetToHomeScreen);
+    backFromPlayerJoinBtn.addEventListener('click', resetToHomeScreen);
+    backToHomeFromGameOverBtn.addEventListener('click', resetToHomeScreen);
+    // *** KẾT THÚC SỬA LỖI ***
+
+    // Nút này có chức năng riêng (hủy phòng và về thư viện), giữ nguyên
+    backFromHostLobbyBtn.addEventListener('click', () => { 
+        stopMusic(); 
+        socket.emit('host_cancel_room', { gamePin: currentPin }); 
+        showScreen('library'); 
+    });
     
     joinBtn.addEventListener('click', () => {
         unlockAudio();
@@ -417,16 +454,19 @@ document.addEventListener('DOMContentLoaded', () => {
         playMusic();
     });
     socket.on('join_error', (data) => errorMessage.innerText = data.message);
+
+    // *** BẮT ĐẦU SỬA LỖI ***
+    // Sử dụng hàm resetToHomeScreen khi bị kick hoặc host ngắt kết nối
     socket.on('kicked', () => { 
-        stopMusic();
         alert('Bạn đã bị host mời khỏi phòng.'); 
-        showScreen('home'); 
+        resetToHomeScreen(); 
     });
     socket.on('host_disconnected', () => { 
-        stopMusic();
         alert("Chủ phòng đã rời đi hoặc hủy phòng. Trò chơi kết thúc."); 
-        showScreen('home'); 
+        resetToHomeScreen(); 
     });
+    // *** KẾT THÚC SỬA LỖI ***
+
     socket.on('new_question', (data) => {
         window.__pendingAnswerResult = null;
         answerStatsDiv.innerHTML = '';
