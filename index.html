@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QAP</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/mylogo.png" type="image/png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Nunito:wght@900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --text-color: #5D4037;
+            --text-color-light: #FFFFFF;
+            --pin-color: #F57C00;
+            /* Kahoot-like answer colors */
+            --kahoot-red: #E91E63;   /* slightly softer red */
+            --kahoot-blue: #3F51B5;  /* blue */
+            --kahoot-yellow: #FFC107;/* yellow */
+            --kahoot-green: #4CAF50; /* green */
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Montserrat', sans-serif;
+            text-align: center;
+            margin: 0;
+            background: linear-gradient(135deg, #FEFBF6 0%, #F5EFE6 100%);
+            color: var(--text-color);
+        }
+        .glass-panel {
+            background: rgba(230, 225, 212, 0.7);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            border-radius: 50px;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #appHeader {
+            position: fixed;
+            top: 30px; left: 50%; transform: translateX(-50%);
+            font-size: 2em; font-weight: 700;
+            color: var(--text-color); z-index: 100;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            padding: 10px 40px;
+            transition: opacity 0.4s ease-in-out;
+        }
+        .screen {
+            position: absolute; top: 0; left: 0;
+            width: 100%; min-height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+            opacity: 0; transform: scale(0.98);
+            pointer-events: none;
+            padding: 120px 0 30px 0; box-sizing: border-box;
+        }
+        .screen.active { opacity: 1; transform: scale(1); pointer-events: auto; }
+        .container {
+            max-width: 700px; width: 90%;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 30px 40px; border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        #libraryScreen .container, #editQuizScreen .container { max-height: 85vh; overflow-y: auto; }
+        h1, h2, h3 { color: var(--text-color); }
+        h1 { font-size: 2em; } h2 { font-size: 1.6em; } h3 { font-size: 1.2em; }
+        button {
+            font-family: 'Montserrat', sans-serif; font-size: 1em; font-weight: 700;
+            padding: 12px 25px; border-radius: 12px; cursor: pointer;
+            margin: 8px; text-transform: uppercase; transition: all 0.2s ease-in-out;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.2));
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            color: var(--text-color);
+        }
+        button:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15); }
+        .glass-panel button {
+            background: transparent; border: none; box-shadow: none;
+            backdrop-filter: none; -webkit-backdrop-filter: none;
+            color: var(--text-color); font-weight: 700; margin: 0; padding: 10px 0; flex: 1; text-align: center;
+        }
+        .glass-panel button:hover { background: rgba(255, 255, 255, 0.2); transform: none; box-shadow: none; }
+        #goPlayerBtn {
+            width: 180px; height: 180px; border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255, 112, 67, 0.7) 0%, rgba(255, 112, 67, 0.4) 100%);
+            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 15px 35px rgba(255, 112, 67, 0.25),
+                        inset 0 -2px 2px rgba(255, 255, 255, 0.2),
+                        inset 0 2px 2px rgba(255, 255, 255, 0.3);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5em; padding: 0; text-align: center; line-height: 1.2;
+            color: var(--text-color-light); text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .glass-panel .separator { width: 1.5px; height: 35px; background-color: rgba(93, 64, 55, 0.15); border-right: 1px solid rgba(255,255,255,0.3); }
+        #homeScreen .container { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; background: transparent; box-shadow: none; border: none; padding: 0; }
+        .bottom-actions.glass-panel { width: 400px; justify-content: center; }
+        input[type="text"], input[type="number"], .question-text-area {
+            font-family: 'Montserrat', sans-serif; font-size: 1.2em; padding: 18px; margin: 8px 0;
+            border-radius: 16px; border: 1px solid transparent; width: 95%;
+            transition: all 0.2s; background: rgba(255, 255, 255, 0.4); color: var(--text-color);
+        }
+        input:focus, .question-text-area:focus { outline: none; border-color: rgba(93, 64, 55, 0.5); box-shadow: 0 0 0 3px rgba(93, 64, 55, 0.1); }
+        .question-text-area { min-height: 80px; }
+        #pinDisplay {
+            font-family: 'Nunito', sans-serif; font-size: 3.5em; font-weight: 900; margin: 15px 0;
+            color: var(--pin-color); letter-spacing: 8px;
+        }
+        .answer-options {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 20px;
+        }
+        .answer-btn {
+            padding: 16px; border-radius: 14px; color: white; border: none; font-size: 1.1em; font-weight: 700;
+            min-height: 64px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        }
+        .answer-btn.red { background: var(--kahoot-red); }
+        .answer-btn.blue { background: var(--kahoot-blue); }
+        .answer-btn.yellow { background: var(--kahoot-yellow); color: #4E342E; }
+        .answer-btn.green { background: var(--kahoot-green); }
+        .answer-btn.disabled { opacity: 0.7; pointer-events: none; }
+        #timerBarContainer { width: 100%; height: 10px; background: rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
+        #timerBar { height: 100%; width: 100%; background: linear-gradient(90deg, #66BB6A, #FFA726); }
+        #leaderboardTable tr.rank-1 td { color: #D4AF37; font-weight: bold; }
+        #leaderboardTable tr.rank-2 td { color: #A9A9A9; font-weight: bold; }
+        #leaderboardTable tr.rank-3 td { color: #A0522D; font-weight: bold; }
+        #podium li { font-size: 1.5em; font-weight: bold; margin: 10px 0; padding: 15px; border-radius: 12px; border: 4px solid transparent; }
+        #podium li:nth-child(1) { border-color: #FFD700; } #podium li:nth-child(2) { border-color: #C0C0C0; } #podium li:nth-child(3) { border-color: #CD7F32; }
+        #confettiCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10000; }
+        #connectionStatus {
+            position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+            padding: 10px 16px; border-radius: 10px; color: white; background: #607D8B;
+            z-index: 9999; transition: opacity .3s ease;
+        }
+        .stats-row { display: grid; grid-template-columns: 120px 1fr 60px; gap: 10px; align-items: center; margin: 6px 0; }
+        .stats-bar { height: 18px; border-radius:9px; background: rgba(0,0,0,0.08); overflow:hidden; }
+        .stats-fill { height: 100%; width: 0%; transition: width .5s ease; }
+        .stats-row.correct .stats-fill { background: #66BB6A; }
+        .stats-row.correct { font-weight:700; }
+        .answer-btn.disabled, .answer-btn.disabled-host { opacity: 0.6; pointer-events: none; }
+        .question-creator {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(0,0,0,0.05);
+            position: relative;
+        }
+        .delete-question-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.4);
+            color: #D32F2F;
+            border: 1px solid rgba(211, 47, 47, 0.3);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-size: 1.2em;
+            font-weight: bold;
+            line-height: 28px;
+            text-align: center;
+            padding: 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 0;
+        }
+        .delete-question-btn:hover {
+            background: #D32F2F;
+            color: white;
+            transform: scale(1.1);
+            box-shadow: none;
+        }
+        .option-input { display: flex; align-items: center; margin-bottom: 8px; }
+        .option-input input[type="radio"] { margin-right: 10px; transform: scale(1.4); }
+        .options-editor-controls { display: flex; justify-content: flex-start; align-items: center; gap: 10px; margin-top: 10px; }
+        #questionMediaContainer {
+            margin-bottom: 20px;
+            min-height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #questionMediaContainer img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            object-fit: contain;
+        }
+        .image-url-input {
+            font-size: 1em !important;
+            padding: 12px 18px !important;
+        }
+        #muteBtn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10001;
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(0,0,0,0.1);
+            color: var(--text-color);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 1.5em;
+            padding: 0;
+            line-height: 50px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin: 0;
+        }
+         #muteBtn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+         }
+    </style>
+</head>
+<body>
+    <audio id="backgroundMusic" loop src="/nhac-nen.mp3"></audio>
+    <audio id="fireworksSound" src="/phao-hoa.mp3"></audio>
+    <button id="muteBtn">🎵</button>
+
+    <div id="appHeader" class="glass-panel">QAP</div>
+
+    <div id="homeScreen" class="screen active">
+        <div class="container">
+            <button id="goPlayerBtn">Tham Gia<br>Phòng</button>
+            <div class="bottom-actions glass-panel">
+                 <button id="goLibraryBtn">Thư Viện</button>
+                 <div class="separator"></div>
+                 <button id="goCreateQuizBtn">Tạo Bộ Câu Hỏi</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="libraryScreen" class="screen">
+        <div class="container">
+            <h2>Thư Viện Câu Hỏi</h2>
+            <div id="quizList"></div>
+            <button id="backToHomeBtn">Quay Về</button>
+        </div>
+    </div>
+
+    <div id="editQuizScreen" class="screen">
+        <div class="container">
+            <h2 id="editQuizTitle">Tạo Bộ Câu Hỏi Mới</h2>
+            <input type="text" id="quizTitleInput" placeholder="Nhập tiêu đề bộ câu hỏi...">
+            <hr>
+            <div id="questionsContainer"></div>
+            <div class="bottom-actions">
+                <button id="addQuestionBtn">Thêm Câu Hỏi</button>
+                <button id="saveChangesBtn" style="display: none;">Lưu Thay Đổi</button>
+                <button id="saveAsCopyBtn">Lưu</button>
+            </div>
+            <button id="backFromEditBtn">Quay về Trang chủ</button>
+            <div id="editStatus" class="status-message"></div>
+        </div>
+    </div>
+
+    <div id="hostLobbyScreen" class="screen">
+        <div class="container">
+            <h2>Mã PIN của phòng:</h2>
+            <div id="pinDisplay">...</div>
+            <div id="playerList">
+                <h3>Người chơi đã tham gia:</h3>
+                <ul></ul>
+            </div>
+            <label style="display:block;margin:15px 0; font-size: 1.1em;">
+                <input type="checkbox" id="shuffleQuestions" style="transform: scale(1.3); margin-right: 8px;">
+                Xào thứ tự câu hỏi
+            </label>
+            <button id="startGameBtn">Bắt Đầu Chơi!</button>
+            <button id="backFromHostLobbyBtn">Hủy Phòng</button>
+        </div>
+    </div>
+
+    <div id="playerJoinScreen" class="screen">
+        <div class="container">
+            <h2>Tham Gia Phòng</h2>
+            <input type="text" id="pinInput" placeholder="Nhập mã PIN" />
+            <input type="text" id="nicknameInput" placeholder="Nhập biệt danh" />
+            <div class="bottom-actions">
+                <button id="joinBtn">Vào Phòng</button>
+                <button id="backFromPlayerJoinBtn">Quay Về</button>
+            </div>
+            <p id="errorMessage"></p>
+        </div>
+    </div>
+
+    <div id="playerLobbyScreen" class="screen">
+        <div class="container">
+            <h2>Bạn đã vào phòng!</h2>
+            <p>Vui lòng chờ Host bắt đầu trò chơi...</p>
+        </div>
+    </div>
+
+    <div id="questionScreen" class="screen">
+        <div class="container">
+            <div id="timerBarContainer"><div id="timerBar"></div></div>
+            <div id="questionMediaContainer"></div>
+            <h2 id="questionText">Đây là nơi câu hỏi sẽ xuất hiện?</h2>
+            <div id="answerOptions" class="answer-options"></div>
+        </div>
+    </div>
+
+    <div id="resultScreen" class="screen">
+        <div class="container">
+            <h2 id="resultText">ĐÚNG</h2>
+            <p id="playerScore">Điểm của bạn: 1000</p>
+            <div id="answerStats"></div>
+            <p>Chờ những người khác trả lời...</p>
+        </div>
+    </div>
+
+    <div id="leaderboardScreen" class="screen">
+        <div class="container">
+            <h2>Bảng Xếp Hạng</h2>
+            <h3 id="leaderboardCongrats" style="margin-top:6px; display:none;">Xin chúc mừng</h3>
+            <table id="leaderboardTable">
+                <thead><tr><th>Hạng</th><th>Tên</th><th>Điểm</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <button id="nextQuestionBtn" style="display: none; margin-top: 20px;">Câu Hỏi Tiếp Theo</button>
+        </div>
+    </div>
+
+    <div id="gameOverScreen" class="screen">
+        <canvas id="confettiCanvas"></canvas>
+        <div class="container">
+            <h2>TRÒ CHƠI KẾT THÚC!</h2>
+            <h3>Xin Chúc Mừng</h3>
+            <ol id="podium"></ol>
+            <button id="backToHomeFromGameOverBtn">Quay về Trang chủ</button>
+        </div>
+    </div>
+
+    <div id="connectionStatus">Đang kết nối tới server...</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="/client.js"></script>
+</body>
+</html>
